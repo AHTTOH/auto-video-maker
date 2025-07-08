@@ -1,0 +1,25 @@
+---
+alwaysApply: true
+description: Environment file access restrictions
+---
+
+# Environment File Access Rules
+
+## .env.local File Access Restriction
+
+**CRITICAL**: Do NOT attempt to access or read `.env.local` files as they are blocked by `.cursorignore` and `.gitignore` configurations.
+
+### What NOT to do:
+- Do not use `read_file` tool on `.env.local`
+- Do not use `file_search` to look for `.env.local`
+- Do not use `grep_search` on `.env.local`
+- Do not waste time trying to access environment files that are intentionally hidden
+
+### What TO do instead:
+- Ask the user directly for environment variable values if needed
+- Reference environment variables by their expected names (e.g., `process.env.OPENAI_API_KEY`)
+- Assume environment variables are properly configured when writing code
+- Focus on code implementation rather than configuration file access
+
+### Reasoning:
+Environment files contain sensitive information (API keys, secrets, database URLs) and are intentionally excluded from version control and AI access for security reasons.

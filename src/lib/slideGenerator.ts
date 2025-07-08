@@ -104,15 +104,15 @@ export async function generateBlackboardSlide(
 }
 
 /**
- * 칠판 질감 효과 추가
+ * 칠판 질감 효과 추가 (투명도 개선)
  */
 function addChalkboardTexture(ctx: CanvasRenderingContext2D, width: number, height: number) {
-  // 노이즈 효과를 위한 랜덤 점들
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-  for (let i = 0; i < 1000; i++) {
+  // 매우 미세한 노이즈 효과 (투명도 극대화)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.01)';
+  for (let i = 0; i < 200; i++) {
     const x = Math.random() * width;
     const y = Math.random() * height;
-    const size = Math.random() * 2;
+    const size = Math.random() * 1;
     ctx.fillRect(x, y, size, size);
   }
 }
@@ -370,14 +370,17 @@ export async function generateBlackboardSlideWithWootman(
     wootmanImage.src = wootmanImageData;
   });
 
-  // 읏맨 이미지 크기 계산 (칠판 하단에 작게 배치)
+  // 읏맨 이미지 크기 계산 (칠판 중앙 하단에 크게 배치)
   const frameWidth = 60;
-  const wootmanSize = 120; // 읏맨 이미지 크기
-  const wootmanX = width - frameWidth - wootmanSize - 20; // 우하단
-  const wootmanY = height - frameWidth - wootmanSize - 20; // 하단
+  const wootmanSize = 350; // 읏맨 이미지 크기 (더 크게)
+  const wootmanX = (width - wootmanSize) / 2; // 중앙 정렬
+  const wootmanY = height - frameWidth - wootmanSize - 50; // 하단에서 약간 위로
 
-  // 읏맨 이미지 그리기
+  // 읏맨 이미지 그리기 (투명도 처리)
+  ctx.save();
+  ctx.globalAlpha = 0.95; // 약간의 투명도 적용
   ctx.drawImage(wootmanImage, wootmanX, wootmanY, wootmanSize, wootmanSize);
+  ctx.restore();
 
   return canvas.toDataURL('image/png');
 }

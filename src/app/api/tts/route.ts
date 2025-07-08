@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || 'sk_16e9decdae05ade8ed6c1707eaf52b059d5af8ec07297c96';
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
-// Default voice ID (Daniel - 영어 젊은 남성 목소리)
-const DEFAULT_VOICE_ID = 'onwK4e9ZLuTAKqWW03F9';
+// Default voice ID (한국어 음성)
+const DEFAULT_VOICE_ID = 'WzMnDIgiICcj1oXbUBO0';
 
 interface TTSRequest {
   text: string;

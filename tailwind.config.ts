@@ -174,6 +174,12 @@ const config = {
         'default': '200ms',
         'slow': '300ms',
       },
+      width: {
+        '120': '30rem', // 480px
+      },
+      height: {
+        '120': '30rem', // 480px
+      },
     },
   },
   plugins: [require('tailwindcss-animate'), require('@tailwindcss/typography')],

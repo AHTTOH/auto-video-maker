@@ -64,9 +64,9 @@ export function WootmanGenerationModal({
           {/* 진행도 바 */}
           {isGenerating && (
             <div className="space-y-2">
-              <Progress value={progress} className="w-full" />
+              <Progress value={Math.min(progress, 100)} className="w-full" />
               <p className="text-xs text-center text-neutral-500">
-                {Math.round(progress)}% 완료
+                {Math.round(Math.min(progress, 100))}% 완료
               </p>
             </div>
           )}

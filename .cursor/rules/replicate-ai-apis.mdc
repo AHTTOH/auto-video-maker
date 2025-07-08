@@ -1,0 +1,311 @@
+---
+description: Guidelines for developing with Replicate AI APIs (Flux Kontext Dev, Image-to-Video)
+globs: src/app/api/**/*.ts,src/lib/**/*.ts
+---
+
+# Replicate AI APIs Development Rules
+
+## Environment Setup
+
+### Required Dependencies
+```bash
+npm install replicate
+```
+
+### Environment Variables
+Always ensure `REPLICATE_API_TOKEN` is properly configured:
+```typescript
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN,
+});
+```
+
+## API Models
+
+### 1. Flux Kontext Dev (Consistent Image Generation)
+**Model**: `black-forest-labs/flux-kontext-dev`
+
+**Purpose**: Generate consistent images based on reference images and prompts
+
+**Input Parameters**:
+```typescript
+interface FluxKontextInput {
+  prompt: string;                    // Description of changes
+  go_fast?: boolean;                // Speed optimization (default: true)
+  guidance?: number;                // Guidance scale (default: 2.5)
+  input_image: string;              // Reference image URL
+  aspect_ratio?: string;            // "match_input_image" or specific ratio
+  output_format?: "jpg" | "png";    // Output format (default: "jpg")
+  output_quality?: number;          // 1-100 (default: 80)
+  num_inference_steps?: number;     // 1-50 (default: 30)
+}
+```
+
+**Usage Example**:
+```typescript
+const input = {
+  prompt: "Change the car color to red, turn the headlights on",
+  go_fast: true,
+  guidance: 2.5,
+  input_image: imageUrl,
+  aspect_ratio: "match_input_image",
+  output_format: "jpg",
+  output_quality: 80,
+  num_inference_steps: 30
+};
+
+const output = await replicate.run("black-forest-labs/flux-kontext-dev", { input });
+```
+
+### 2. Image-to-Video (WAN 2.1)
+**Model**: `wavespeedai/wan-2.1-i2v-480p`
+
+**Purpose**: Convert static images to video animations
+
+**Input Parameters**:
+```typescript
+interface ImageToVideoInput {
+  image: string;                    // Input image URL
+  prompt: string;                   // Video description
+  max_area?: string;               // "832x480" or other resolutions
+  fast_mode?: "Balanced" | "Fast" | "Quality";
+  lora_scale?: number;             // 0-2 (default: 1)
+  num_frames?: number;             // 1-121 (default: 81)
+  sample_shift?: number;           // 1-8 (default: 3)
+  sample_steps?: number;           // 1-50 (default: 30)
+  frames_per_second?: number;      // 8-30 (default: 16)
+  sample_guide_scale?: number;     // 1-10 (default: 5)
+}
+```
+
+**Usage Example**:
+```typescript
+const input = {
+  image: imageUrl,
+  prompt: "A woman is talking",
+  max_area: "832x480",
+  fast_mode: "Balanced",
+  lora_scale: 1,
+  num_frames: 81,
+  sample_shift: 3,
+  sample_steps: 30,
+  frames_per_second: 16,
+  sample_guide_scale: 5
+};
+
+const output = await replicate.run("wavespeedai/wan-2.1-i2v-480p", { input });
+```
+
+## Development Patterns
+
+### API Route Structure
+Follow this pattern for Next.js API routes:
+
+```typescript
+// src/app/api/[service-name]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import Replicate from 'replicate';
+
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN,
+});
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    
+    // Validate input parameters
+    if (!body.prompt || !body.input_image) {
+      return NextResponse.json(
+        { error: 'Missing required parameters' },
+        { status: 400 }
+      );
+    }
+
+    const input = {
+      // Map request body to model input
+    };
+
+    const output = await replicate.run("model-name", { input });
+    
+    return NextResponse.json({ 
+      success: true, 
+      result: output 
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### Error Handling
+Always implement comprehensive error handling:
+
+```typescript
+// Check for API token
+if (!process.env.REPLICATE_API_TOKEN) {
+  throw new Error('REPLICATE_API_TOKEN is not configured');
+}
+
+// Validate input parameters
+const validateInput = (input: any) => {
+  const errors: string[] = [];
+  
+  if (!input.prompt?.trim()) {
+    errors.push('Prompt is required');
+  }
+  
+  if (!input.input_image?.trim()) {
+    errors.push('Input image is required');
+  }
+  
+  return errors;
+};
+```
+
+### File Handling
+When working with output files:
+
+```typescript
+// Access file URL
+const fileUrl = output.url();
+
+// For downloading/saving files
+import fs from 'node:fs';
+import path from 'node:path';
+
+const saveFile = async (output: any, filename: string) => {
+  const tempDir = path.join(process.cwd(), 'temp');
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+  
+  const filePath = path.join(tempDir, filename);
+  await fs.promises.writeFile(filePath, output);
+  return filePath;
+};
+```
+
+### Client-Side Integration
+
+```typescript
+// lib/api.ts
+export const generateConsistentImage = async (params: {
+  prompt: string;
+  inputImage: string;
+  options?: Partial<FluxKontextInput>;
+}) => {
+  const response = await fetch('/api/flux-kontext', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt: params.prompt,
+      input_image: params.inputImage,
+      ...params.options,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to generate image');
+  }
+
+  return response.json();
+};
+
+export const generateVideo = async (params: {
+  image: string;
+  prompt: string;
+  options?: Partial<ImageToVideoInput>;
+}) => {
+  const response = await fetch('/api/video-generation', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      image: params.image,
+      prompt: params.prompt,
+      ...params.options,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to generate video');
+  }
+
+  return response.json();
+};
+```
+
+## Best Practices
+
+### 1. Parameter Optimization
+- **Flux Kontext**: Use `go_fast: true` for development, adjust `guidance` (2.5-3.5) for quality
+- **Image-to-Video**: Use `fast_mode: "Balanced"` for good quality/speed balance
+
+### 2. Resource Management
+- Always implement timeouts for long-running operations
+- Use proper cleanup for temporary files
+- Monitor API usage and costs
+
+### 3. Error Recovery
+- Implement retry logic for network failures
+- Provide meaningful error messages to users
+- Log errors for debugging
+
+### 4. Performance
+- Cache results when appropriate
+- Use streaming for large outputs
+- Implement progress tracking for long operations
+
+### 5. Security
+- Validate all inputs thoroughly
+- Sanitize file names and paths
+- Never expose API tokens to client-side code
+
+## Common Use Cases
+
+### Consistent Character Generation
+```typescript
+// Generate multiple images of the same character
+const baseImage = "character-reference.jpg";
+const variations = [
+  "smiling and waving",
+  "sitting at a desk",
+  "walking in a park"
+];
+
+const images = await Promise.all(
+  variations.map(prompt => 
+    generateConsistentImage({
+      prompt,
+      inputImage: baseImage,
+      options: { guidance: 3.0 }
+    })
+  )
+);
+```
+
+### Video Sequence Creation
+```typescript
+// Create video from generated image
+const image = await generateConsistentImage({
+  prompt: "professional presentation setup",
+  inputImage: referenceImage
+});
+
+const video = await generateVideo({
+  image: image.result.url(),
+  prompt: "person presenting confidently",
+  options: {
+    num_frames: 121,
+    frames_per_second: 24
+  }
+});
+```

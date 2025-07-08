@@ -95,12 +95,12 @@ export function Sidebar({ className }: SidebarProps) {
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-neutral-600">진행률</span>
-                      <span className="font-medium text-neutral-900">{job.progress}%</span>
+                      <span className="font-medium text-neutral-900">{Math.min(job.progress, 100)}%</span>
                     </div>
                     <div className="progress-modern h-1.5">
                       <div 
                         className="progress-fill h-full"
-                        style={{ width: `${job.progress}%` }}
+                        style={{ width: `${Math.min(job.progress, 100)}%` }}
                       />
                     </div>
                   </div>

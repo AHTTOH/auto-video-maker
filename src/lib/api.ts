@@ -408,45 +408,84 @@ export async function readTextFile(file: File): Promise<string> {
 }
 
 /**
- * DALL-E3 읏맨 이미지 생성
+ * 원본 읏맨 이미지 로드 (기본 읏맨 PNG 파일 사용)
  */
-export interface WootmanResult {
-  slideIndex: number;
-  imageData: string | null;
-  prompt?: string;
-  error?: string;
+export async function loadOriginalWootman(): Promise<string> {
+  try {
+    // 원본 읏맨 이미지 URL
+    const imageUrl = '/eutman/읏맨(원본).png';
+    
+    // 이미지를 base64로 변환
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error('읏맨 이미지를 로드할 수 없습니다.');
+    }
+    
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('원본 읏맨 이미지 로드 오류:', error);
+    throw new Error('읏맨 이미지를 로드할 수 없습니다.');
+  }
 }
 
-export async function generateWootman(slideCount: number, context?: string) {
+/**
+ * 영상 생성 API 호출
+ */
+export interface VideoGenerationData {
+  slides: {
+    slideIndex: number;
+    slideImage: string;
+    title: string;
+    content: string;
+    audioData: string | null;
+    duration: number;
+  }[];
+  wootmanImage: string | null;
+}
+
+export interface VideoGenerationResult {
+  success: boolean;
+  videoUrl?: string;
+  error?: string;
+  message?: string;
+}
+
+export async function generateVideo(data: VideoGenerationData) {
   try {
-    const response = await fetch('/api/dall-e', {
+    const response = await fetch('/api/video-generation', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ slideCount, context }),
+      body: JSON.stringify(data),
     });
 
-    const data = await response.json();
+    const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || '읏맨 이미지 생성 중 오류가 발생했습니다.');
+      throw new Error(result.error || '영상 생성 중 오류가 발생했습니다.');
     }
 
     return {
-      success: data.success,
-      results: data.results as WootmanResult[],
-      message: data.message,
+      success: result.success,
+      videoUrl: result.videoUrl,
+      message: result.message,
       error: null
     };
 
   } catch (error) {
-    console.error('읏맨 생성 요청 오류:', error);
+    console.error('영상 생성 요청 오류:', error);
     return {
       success: false,
-      results: [],
+      videoUrl: undefined,
       message: '',
-      error: error instanceof Error ? error.message : '읏맨 이미지 생성 중 오류가 발생했습니다.'
+      error: error instanceof Error ? error.message : '영상 생성 중 오류가 발생했습니다.'
     };
   }
 } 

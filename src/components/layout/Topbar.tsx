@@ -26,7 +26,6 @@ export function Topbar() {
 
   const navItems: NavItem[] = [
     { name: '홈', href: '/', icon: Home },
-    { name: '업로드', href: '/', icon: Upload },
     { name: '내 영상', href: '/jobs', icon: Video, badge: totalJobs },
     { name: '도움말', href: '/help', icon: HelpCircle },
   ];
