@@ -51,3 +51,5 @@ ffmpeg-2025-07-07-git-d2828ab284-full_build/
 
 # generated videos
 public/generated-videos/
+
+.vercel
