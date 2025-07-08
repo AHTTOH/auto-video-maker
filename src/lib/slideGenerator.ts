@@ -320,22 +320,16 @@ export async function generateSlidePreview(slide: SlideData, slideNumber: number
 }
 
 /**
- * 칠판 스타일의 슬라이드 이미지를 Canvas로 생성 (읏맨 이미지 포함)
+ * 칠판 스타일의 슬라이드 이미지를 Canvas로 생성 (원본 읏맨 이미지 포함)
  */
 export async function generateBlackboardSlideWithWootman(
   slide: SlideData,
   slideNumber: number,
   totalSlides: number,
-  wootmanImageData?: string,
   options: SlideGenerationOptions = {}
 ): Promise<string> {
   // 기본 슬라이드 생성
   const baseSlideImage = await generateBlackboardSlide(slide, slideNumber, totalSlides, options);
-  
-  // 읏맨 이미지가 없으면 기본 슬라이드 반환
-  if (!wootmanImageData) {
-    return baseSlideImage;
-  }
 
   const {
     width = 1080,
@@ -362,50 +356,97 @@ export async function generateBlackboardSlideWithWootman(
 
   ctx.drawImage(baseImage, 0, 0, width, height);
 
-  // 읏맨 이미지 로드 및 오버레이
-  const wootmanImage = new Image();
-  await new Promise((resolve, reject) => {
-    wootmanImage.onload = resolve;
-    wootmanImage.onerror = reject;
-    wootmanImage.src = wootmanImageData;
-  });
+  try {
+    // 원본 읏맨 이미지 로드
+    const wootmanImage = new Image();
+    await new Promise((resolve, reject) => {
+      wootmanImage.onload = resolve;
+      wootmanImage.onerror = reject;
+      wootmanImage.src = '/eutman/읏맨(원본).png';
+    });
 
-  // 읏맨 이미지 크기 계산 (칠판 중앙 하단에 크게 배치)
-  const frameWidth = 60;
-  const wootmanSize = 350; // 읏맨 이미지 크기 (더 크게)
-  const wootmanX = (width - wootmanSize) / 2; // 중앙 정렬
-  const wootmanY = height - frameWidth - wootmanSize - 50; // 하단에서 약간 위로
+    // 읏맨 이미지 크기 계산 (300% 증가)
+    const frameWidth = 60;
+    const boardWidth = width - frameWidth * 2;
+    const boardHeight = height - frameWidth * 2;
+    
+    // 기존 크기의 300% 증가 (기존: 0.25 * 0.2 -> 새로운: 0.75 * 0.6)
+    const wootmanSize = Math.min(boardWidth * 0.75, boardHeight * 0.6);
+    const wootmanX = (width - wootmanSize) / 2; // 중앙 정렬
+    const wootmanY = height - frameWidth - wootmanSize - 40; // 하단에 위치 (여유 공간 40px)
 
-  // 읏맨 이미지 그리기 (투명도 처리)
-  ctx.save();
-  ctx.globalAlpha = 0.95; // 약간의 투명도 적용
-  ctx.drawImage(wootmanImage, wootmanX, wootmanY, wootmanSize, wootmanSize);
-  ctx.restore();
+    // 읏맨 이미지를 배경 투명하게 처리하여 그리기
+    ctx.save();
+    
+    // 임시 캔버스에서 배경 제거 처리
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = wootmanSize;
+    tempCanvas.height = wootmanSize;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    if (tempCtx) {
+      // 읏맨 이미지를 임시 캔버스에 그리기
+      tempCtx.drawImage(wootmanImage, 0, 0, wootmanSize, wootmanSize);
+      
+      // 읏맨 이미지의 픽셀 데이터 가져오기
+      const imageData = tempCtx.getImageData(0, 0, wootmanSize, wootmanSize);
+      const data = imageData.data;
+      
+      // 흰색 배경을 투명하게 변경 (더 정확한 흰색 감지)
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const alpha = data[i + 3];
+        
+        // 순수한 흰색(RGB: 255,255,255)과 매우 유사한 색상만 투명하게 처리
+        // 색상 차이가 15 이하인 거의 흰색 픽셀만 제거
+        const whiteThreshold = 15;
+        const rDiff = Math.abs(r - 255);
+        const gDiff = Math.abs(g - 255);
+        const bDiff = Math.abs(b - 255);
+        
+        if (rDiff <= whiteThreshold && gDiff <= whiteThreshold && bDiff <= whiteThreshold && alpha > 200) {
+          data[i + 3] = 0; // 알파값을 0으로 설정 (투명)
+        }
+      }
+      
+      // 수정된 이미지 데이터를 임시 캔버스에 다시 그리기
+      tempCtx.putImageData(imageData, 0, 0);
+      
+      // 메인 캔버스에 배경이 제거된 읏맨 이미지 그리기
+      ctx.drawImage(tempCanvas, wootmanX, wootmanY);
+    } else {
+      // 임시 캔버스 생성 실패 시 원본 이미지 그대로 사용
+      ctx.drawImage(wootmanImage, wootmanX, wootmanY, wootmanSize, wootmanSize);
+    }
+    
+    ctx.restore();
+  } catch (error) {
+    console.warn('읏맨 이미지 로드 실패, 기본 슬라이드만 표시:', error);
+    // 읏맨 이미지 로드 실패 시 기본 슬라이드만 반환
+  }
 
   return canvas.toDataURL('image/png');
 }
 
 /**
- * 여러 슬라이드를 읏맨 이미지와 함께 생성
+ * 여러 슬라이드를 원본 읏맨 이미지와 함께 생성
  */
 export async function generateSlidesWithWootman(
   slides: SlideData[],
-  wootmanResults: { slideIndex: number; imageData: string | null }[],
   options: SlideGenerationOptions = {}
 ): Promise<string[]> {
   const slideImages: string[] = [];
 
   for (let i = 0; i < slides.length; i++) {
     const slide = slides[i];
-    const wootmanResult = wootmanResults.find(w => w.slideIndex === i);
-    const wootmanImageData = wootmanResult?.imageData || undefined;
 
     try {
       const slideImage = await generateBlackboardSlideWithWootman(
         slide,
         i + 1,
         slides.length,
-        wootmanImageData,
         options
       );
       slideImages.push(slideImage);

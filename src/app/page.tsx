@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileText, Video, Sparkles, Clock, Zap, CheckCircle, AlertCircle, Image, Volume2, Play, Pause, Bot, Type, ChevronLeft, ChevronRight } from 'lucide-react';
-import { readTextFile, summarizeText, generateTTS, generateWootman, generateVideo, generateFluxSlides, type TTSResult, type WootmanResult, type VideoGenerationData, type FluxSlideData } from '@/lib/api';
+import { readTextFile, summarizeText, generateTTS, generateVideo, type TTSResult, type VideoGenerationData } from '@/lib/api';
 import { generateSlidesForDisplay, generateSlidesWithWootman, type SlideData } from '@/lib/slideGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { WootmanGenerationModal } from '@/components/ui/wootman-generation-modal';
@@ -45,13 +45,35 @@ export default function HomePage() {
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [isVideoComplete, setIsVideoComplete] = useState(false);
   
-  // 읏맨 캐러셀 상태 추가
-  const [currentWootmanIndex, setCurrentWootmanIndex] = useState(0);
-  
-  // 부서 선택 상태 추가
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('general');
+
   
   const { toast } = useToast();
+
+  // 읏맨 캐릭터 배열
+  const wootmanCharacters = [
+    { src: '/eutman/모기지기획팀.png', alt: '모기지기획팀 읏맨', name: '모기지기획팀' },
+    { src: '/eutman/여신기획팀.png', alt: '여신기획팀 읏맨', name: '여신기획팀' },
+    { src: '/eutman/인사팀.png', alt: '인사팀 읏맨', name: '인사팀' },
+    { src: '/eutman/정보보안팀.png', alt: '정보보안팀 읏맨', name: '정보보안팀' },
+    { src: '/eutman/AI팀.png', alt: 'AI팀 읏맨', name: 'AI팀' }
+  ];
+
+  // 읏맨 캐러셀 상태
+  const [currentWootmanIndex, setCurrentWootmanIndex] = useState(0);
+
+  // 이전 읏맨으로 이동
+  const handlePreviousWootman = () => {
+    setCurrentWootmanIndex((prev) => 
+      prev === 0 ? wootmanCharacters.length - 1 : prev - 1
+    );
+  };
+
+  // 다음 읏맨으로 이동
+  const handleNextWootman = () => {
+    setCurrentWootmanIndex((prev) => 
+      prev === wootmanCharacters.length - 1 ? 0 : prev + 1
+    );
+  };
 
   // URL 이미지를 base64 데이터 URL로 변환하는 유틸리티 함수
   const convertUrlToBase64 = async (imageUrl: string): Promise<string> => {
@@ -71,28 +93,7 @@ export default function HomePage() {
     }
   };
 
-  // 읏맨 캐릭터 배열
-  const wootmanCharacters = [
-    { src: '/eutman/AI팀.png', alt: 'AI팀 읏맨', name: 'AI팀' },
-    { src: '/eutman/정보보안팀.png', alt: '정보보안팀 읏맨', name: '정보보안팀' },
-    { src: '/eutman/여신기획팀.png', alt: '여신기획팀 읏맨', name: '여신기획팀' },
-    { src: '/eutman/인사팀.png', alt: '인사팀 읏맨', name: '인사팀' },
-    { src: '/eutman/모기지기획팀.png', alt: '모기지기획팀 읏맨', name: '모기지기획팀' }
-  ];
 
-  // 이전 읏맨으로 이동
-  const handlePreviousWootman = () => {
-    setCurrentWootmanIndex((prev) => 
-      prev === 0 ? wootmanCharacters.length - 1 : prev - 1
-    );
-  };
-
-  // 다음 읏맨으로 이동
-  const handleNextWootman = () => {
-    setCurrentWootmanIndex((prev) => 
-      prev === wootmanCharacters.length - 1 ? 0 : prev + 1
-    );
-  };
 
   const handleFileSelect = async (file: File) => {
     setUploadedFile(file);
@@ -184,6 +185,7 @@ export default function HomePage() {
     setIsVideoComplete(false);
     // 읏맨 캐러셀 상태 초기화
     setCurrentWootmanIndex(0);
+
   };
 
   const handleTextSubmit = async () => {
@@ -342,84 +344,35 @@ export default function HomePage() {
     try {
       setIsGeneratingWootman(true);
       toast({
-        title: "REPLICATE FLUX Kontext Dev 읏맨 편집 시작",
-        description: "원본 읏맨을 바탕으로 부서별 특성을 반영한 읏맨 캐릭터를 편집하고 있습니다...",
+        title: "읏맨 배치 시작",
+        description: "칠판 스타일 슬라이드에 읏맨 캐릭터를 배치하고 있습니다...",
       });
 
-      // 모든 슬라이드의 제목과 내용을 합쳐서 하나의 텍스트로 만들기
-      const combinedContent = summaryResult.slides
-        .map((slide, index) => `슬라이드 ${index + 1}: ${slide.title}. ${slide.content}`)
-        .join(' ');
+      // SlideData 형식으로 변환
+      const slides: SlideData[] = summaryResult.slides.map((slide) => ({
+        title: slide.title,
+        content: slide.content,
+        duration: slide.duration
+      }));
 
-      // 선택된 부서 이름 가져오기
-      const departmentName = wootmanCharacters[currentWootmanIndex]?.name || 'general';
-      
-      const result = await generateWootman(combinedContent, departmentName);
+      // 원본 읏맨과 칠판 슬라이드 결합
+      const combinedSlides = await generateSlidesWithWootman(slides);
+      setGeneratedSlides(combinedSlides);
 
-      if (result.error) {
-        throw new Error(result.error);
-      }
+      // 원본 읏맨 이미지 설정 (영상 생성용)
+      setWootmanImage('/eutman/읏맨(원본).png');
+      setIsWootmanComplete(true);
 
-      if (result.wootmanImage) {
-        setWootmanImage(result.wootmanImage);
-        
-        toast({
-          title: "REPLICATE FLUX Kontext Dev 읏맨 편집 완료",
-          description: `${departmentName} 스타일의 읏맨 캐릭터가 편집되었습니다! 칠판 슬라이드와 결합중...`,
-        });
-
-        // 5.5번 단계: Canvas 칠판에 읏맨 캐릭터 이미지 결합
-        if (summaryResult && generatedSlides.length > 0) {
-          toast({
-            title: "읏맨 슬라이드 결합 시작",
-            description: "칠판 스타일 슬라이드에 읏맨 캐릭터를 결합하고 있습니다...",
-          });
-
-          try {
-            // REPLICATE FLUX Kontext Dev URL을 base64 데이터 URL로 변환
-            const wootmanBase64 = await convertUrlToBase64(result.wootmanImage);
-
-            // SlideData 형식으로 변환
-            const slides: SlideData[] = summaryResult.slides.map((slide) => ({
-              title: slide.title,
-              content: slide.content,
-              duration: slide.duration
-            }));
-
-            // 읏맨 결과 데이터 준비 (모든 슬라이드에 동일한 읏맨 이미지 적용)
-            const wootmanResults = slides.map((_, index) => ({
-              slideIndex: index,
-              imageData: wootmanBase64
-            }));
-
-            // 칠판 슬라이드와 읏맨 결합
-            const combinedSlides = await generateSlidesWithWootman(slides, wootmanResults);
-            setGeneratedSlides(combinedSlides);
-
-            toast({
-              title: "읏맨 슬라이드 결합 완료",
-              description: "읏맨이 포함된 칠판 스타일 슬라이드가 완성되었습니다!",
-            });
-          } catch (combineError) {
-            console.error('슬라이드 결합 오류:', combineError);
-            toast({
-              title: "슬라이드 결합 실패",
-              description: "읏맨과 슬라이드 결합 중 오류가 발생했습니다.",
-              variant: "destructive",
-            });
-          }
-        }
-        
-        setIsWootmanComplete(true);
-      } else {
-        throw new Error("읏맨 이미지를 생성하지 못했습니다.");
-      }
+      toast({
+        title: "읏맨 배치 완료",
+        description: "읏맨이 포함된 칠판 스타일 슬라이드가 완성되었습니다!",
+      });
 
     } catch (error) {
-      console.error('REPLICATE FLUX Kontext Dev 읏맨 편집 오류:', error);
+      console.error('읏맨 슬라이드 생성 오류:', error);
       toast({
-        title: "읏맨 편집 실패",
-        description: error instanceof Error ? error.message : "읏맨 편집 중 오류가 발생했습니다.",
+        title: "읏맨 배치 실패",
+        description: error instanceof Error ? error.message : "읏맨 배치 중 오류가 발생했습니다.",
         variant: "destructive",
       });
     } finally {
@@ -541,13 +494,13 @@ export default function HomePage() {
                 </div>
                 
                 {/* 읏맨 캐릭터 캐러셀 */}
-                <div className="relative bg-white rounded-2xl py-8 min-h-[600px] flex items-center justify-center">
+                <div className="relative bg-white rounded-2xl py-8 min-h-[400px] flex items-center justify-center">
                   {/* 왼쪽 화살표 버튼 */}
                   <button
                     onClick={handlePreviousWootman}
-                    className="absolute left-4 z-10 w-16 h-16 bg-black/80 hover:bg-black text-white flex items-center justify-center transition-all duration-200"
+                    className="absolute left-4 z-10 w-12 h-12 bg-black/80 hover:bg-black text-white flex items-center justify-center rounded-full transition-all duration-200"
                   >
-                    <ChevronLeft className="h-8 w-8" />
+                    <ChevronLeft className="h-6 w-6" />
                   </button>
 
                   {/* 현재 읏맨 캐릭터 */}
@@ -556,14 +509,14 @@ export default function HomePage() {
                       <img 
                         src={wootmanCharacters[currentWootmanIndex].src}
                         alt={wootmanCharacters[currentWootmanIndex].alt}
-                        className="w-120 h-120 object-contain transition-all duration-300"
+                        className="w-64 h-64 object-contain transition-all duration-300"
                         onError={(e) => {
                           // 이미지 로딩 실패 시 대체 텍스트 표시
                           e.currentTarget.style.display = 'none';
                           const parent = e.currentTarget.parentElement;
                           if (parent && !parent.querySelector('.fallback-text')) {
                             const fallback = document.createElement('div');
-                            fallback.className = 'fallback-text w-120 h-120 flex items-center justify-center bg-gray-100 rounded-lg text-3xl font-medium text-gray-600 text-center';
+                            fallback.className = 'fallback-text w-64 h-64 flex items-center justify-center bg-gray-100 rounded-lg text-3xl font-medium text-gray-600 text-center';
                             fallback.textContent = '읏맨';
                             parent.appendChild(fallback);
                           }
@@ -587,7 +540,10 @@ export default function HomePage() {
                         ))}
                       </div>
                       
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 font-medium">
+                        {wootmanCharacters[currentWootmanIndex].name}
+                      </p>
+                      <p className="text-xs text-gray-500">
                         {currentWootmanIndex + 1} / {wootmanCharacters.length}
                       </p>
                     </div>
@@ -596,9 +552,9 @@ export default function HomePage() {
                   {/* 오른쪽 화살표 버튼 */}
                   <button
                     onClick={handleNextWootman}
-                    className="absolute right-4 z-10 w-16 h-16 bg-black/80 hover:bg-black text-white flex items-center justify-center transition-all duration-200"
+                    className="absolute right-4 z-10 w-12 h-12 bg-black/80 hover:bg-black text-white flex items-center justify-center rounded-full transition-all duration-200"
                   >
-                    <ChevronRight className="h-8 w-8" />
+                    <ChevronRight className="h-6 w-6" />
                   </button>
                 </div>
               </div>
@@ -865,16 +821,7 @@ export default function HomePage() {
                           alt={`슬라이드 ${index + 1}`}
                           className="w-full h-auto rounded-md shadow-sm"
                         />
-                        {/* 읏맨 캐릭터 표시 */}
-                        {wootmanImage && (
-                          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-                            <img 
-                              src={wootmanImage} 
-                              alt="읏맨 캐릭터"
-                              className="w-24 h-24 object-contain drop-shadow-lg opacity-95"
-                            />
-                          </div>
-                        )}
+                        {/* 읏맨 캐릭터 표시 제거 - 슬라이드에 이미 포함되어 있음 */}
                       </div>
                       <div className="text-center space-y-2">
                         <h3 className="font-semibold text-neutral-900">
@@ -948,12 +895,12 @@ export default function HomePage() {
                     {isGeneratingWootman ? (
                       <>
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                        읏맨 생성 중...
+                        읏맨 배치 중...
                       </>
                     ) : (
                       <>
                         <Bot className="h-5 w-5 mr-2" />
-                        읏맨 만들기
+                        읏맨 배치하기
                       </>
                     )}
                   </Button>

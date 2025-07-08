@@ -27,9 +27,9 @@ export function WootmanGenerationModal({
 }: WootmanGenerationModalProps) {
   const getStatusMessage = () => {
     if (error) return '이미지 생성 실패';
-    if (generatedImage) return '읏맨 생성 완료!';
-    if (isGenerating) return '읏맨을 생성하고 있습니다...';
-    return '읏맨 생성 준비 중';
+    if (generatedImage) return '읏맨 배치 완료!';
+    if (isGenerating) return '읏맨을 배치하고 있습니다...';
+    return '읏맨 배치 준비 중';
   };
 
   const getStatusIcon = () => {
@@ -44,7 +44,7 @@ export function WootmanGenerationModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getStatusIcon()}
-            읏맨 생성하기
+            읏맨 배치하기
           </DialogTitle>
         </DialogHeader>
         

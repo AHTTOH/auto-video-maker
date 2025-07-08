@@ -45,3 +45,9 @@ next-env.d.ts
 
 # temporary files
 /temp
+
+# FFmpeg binaries (too large for GitHub)
+ffmpeg-2025-07-07-git-d2828ab284-full_build/
+
+# generated videos
+public/generated-videos/

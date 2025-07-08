@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { VideoCard } from '@/components/videos/VideoCard';
-import { getVideos } from '@/lib/api';
+import { getVideos, deleteVideo } from '@/lib/api';
 import { Video } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -104,8 +104,33 @@ export default function VideosPage() {
   }, [videos, searchQuery, statusFilter, sortBy]);
 
   // 비디오 삭제 핸들러
-  const handleVideoDelete = (videoId: string) => {
-    setVideos(prev => prev.filter(v => v.id !== videoId));
+  const handleVideoDelete = async (videoId: string) => {
+    try {
+      // API를 통해 비디오 삭제
+      const { error } = await deleteVideo(videoId);
+      
+      if (error) {
+        toast({
+          title: '삭제 실패',
+          description: '영상 삭제 중 오류가 발생했습니다.',
+          variant: 'destructive',
+        });
+      } else {
+        // 성공시 로컬 상태 업데이트
+        setVideos(prev => prev.filter(v => v.id !== videoId));
+        toast({
+          title: '삭제 완료',
+          description: '영상이 성공적으로 삭제되었습니다.',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to delete video:', error);
+      toast({
+        title: '삭제 실패',
+        description: '영상 삭제 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    }
   };
 
   // 통계 계산

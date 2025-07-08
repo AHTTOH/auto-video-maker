@@ -139,6 +139,66 @@ export async function getAvailableVoices() {
 }
 
 /**
+ * 새 비디오 생성
+ */
+export async function createVideo(videoData: {
+  title: string;
+  description?: string;
+  duration_sec: number;
+  file_size: number;
+  storage_path: string;
+  thumbnail_path?: string;
+  tags?: string[];
+  status?: 'processing' | 'completed' | 'failed';
+}) {
+  const { data, error } = await supabase
+    .from('videos')
+    .insert({
+      user_id: CURRENT_USER_ID,
+      ...videoData,
+      tags: videoData.tags || [],
+      status: videoData.status || 'completed'
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating video:', error);
+    return { data: null, error };
+  }
+
+  return { data: data as Video, error: null };
+}
+
+/**
+ * 슬라이드 생성
+ */
+export async function createSlides(videoId: string, slidesData: Array<{
+  order_idx: number;
+  title: string;
+  content: string;
+  image_path: string;
+  duration_sec: number;
+}>) {
+  const slides = slidesData.map(slide => ({
+    video_id: videoId,
+    ...slide
+  }));
+
+  const { data, error } = await supabase
+    .from('slides')
+    .insert(slides)
+    .select();
+
+  if (error) {
+    console.error('Error creating slides:', error);
+    return { data: null, error };
+  }
+
+  return { data: data as Slide[], error: null };
+}
+
+/**
  * 비디오 삭제
  */
 export async function deleteVideo(videoId: string) {
