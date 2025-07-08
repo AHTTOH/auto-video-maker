@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileText, Video, Sparkles, Clock, Zap, CheckCircle, AlertCircle, Image, Volume2, Play, Pause, Bot, Type, ChevronLeft, ChevronRight } from 'lucide-react';
-import { readTextFile, summarizeText, generateTTS, generateVideo, type TTSResult, type VideoGenerationData } from '@/lib/api';
+import { readTextFile, summarizeText, generateTTS, generateVideo, type TTSResult, type VideoGenerationData, type VideoGenerationResult } from '@/lib/api';
 import { generateSlidesForDisplay, generateSlidesWithWootman, type SlideData } from '@/lib/slideGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { WootmanGenerationModal } from '@/components/ui/wootman-generation-modal';
@@ -20,6 +20,8 @@ interface SummaryResult {
     duration: number;
   }>;
 }
+
+
 
 export default function HomePage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);

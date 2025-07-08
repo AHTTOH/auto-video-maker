@@ -6,12 +6,17 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+// 빌드 시점에는 환경 변수가 없을 수 있으므로 fallback 제공
+const url = supabaseUrl || 'https://placeholder.supabase.co';
+const key = supabaseAnonKey || 'placeholder-anon-key';
+
+// 런타임에서 실제 환경 변수 확인
+if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseAnonKey)) {
+  console.warn('Supabase 환경 변수가 설정되지 않았습니다. 실제 기능이 제한될 수 있습니다.');
 }
 
 // Supabase 클라이언트 생성
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(url, key);
 
 // Database 타입 정의 (ERD 기반)
 export interface User {

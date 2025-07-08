@@ -14,12 +14,22 @@ import type {
 // 현재는 단일 사용자 모드이므로 하드코딩된 사용자 ID 사용
 const CURRENT_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
 
+// Supabase 환경 변수 확인 함수
+function isSupabaseConfigured(): boolean {
+  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
 // ===== 비디오 관련 API =====
 
 /**
  * 사용자의 모든 비디오 목록 조회
  */
 export async function getVideos() {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase가 구성되지 않았습니다. 빈 배열을 반환합니다.');
+    return { data: [], error: null };
+  }
+
   const { data, error } = await supabase
     .from('videos')
     .select('*')
@@ -151,6 +161,22 @@ export async function createVideo(videoData: {
   tags?: string[];
   status?: 'processing' | 'completed' | 'failed';
 }) {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase가 구성되지 않았습니다. 더미 데이터를 반환합니다.');
+    return { 
+      data: { 
+        id: 'dummy-id', 
+        user_id: CURRENT_USER_ID,
+        ...videoData,
+        tags: videoData.tags || [],
+        status: videoData.status || 'completed',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } as Video, 
+      error: null 
+    };
+  }
+
   const { data, error } = await supabase
     .from('videos')
     .insert({
@@ -180,6 +206,18 @@ export async function createSlides(videoId: string, slidesData: Array<{
   image_path: string;
   duration_sec: number;
 }>) {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase가 구성되지 않았습니다. 더미 슬라이드 데이터를 반환합니다.');
+    const dummySlides = slidesData.map((slide, index) => ({
+      id: `dummy-slide-${index}`,
+      video_id: videoId,
+      ...slide,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })) as Slide[];
+    return { data: dummySlides, error: null };
+  }
+
   const slides = slidesData.map(slide => ({
     video_id: videoId,
     ...slide
@@ -511,13 +549,13 @@ export interface VideoGenerationData {
 
 export interface VideoGenerationResult {
   success: boolean;
-  videoUrl?: string;
-  videoData?: string; // Vercel 환경에서 base64 비디오 데이터
+  videoUrl: string | null;
+  videoData: string | null; // Vercel 환경에서 base64 비디오 데이터
   error?: string;
-  message?: string;
+  message: string;
 }
 
-export async function generateVideo(data: VideoGenerationData) {
+export async function generateVideo(data: VideoGenerationData): Promise<VideoGenerationResult> {
   try {
     const response = await fetch('/api/video-generation', {
       method: 'POST',
@@ -535,17 +573,19 @@ export async function generateVideo(data: VideoGenerationData) {
 
     return {
       success: result.success,
-      videoUrl: result.videoUrl,
-      message: result.message,
-      error: null
+      videoUrl: result.videoUrl || null,
+      videoData: result.videoData || null,
+      message: result.message || '영상 생성이 완료되었습니다.',
+      error: result.error
     };
 
   } catch (error) {
     console.error('영상 생성 요청 오류:', error);
     return {
       success: false,
-      videoUrl: undefined,
-      message: '',
+      videoUrl: null,
+      videoData: null,
+      message: '영상 생성에 실패했습니다.',
       error: error instanceof Error ? error.message : '영상 생성 중 오류가 발생했습니다.'
     };
   }
