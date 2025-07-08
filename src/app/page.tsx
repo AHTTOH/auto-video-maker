@@ -431,8 +431,22 @@ export default function HomePage() {
         throw new Error(result.error);
       }
 
-      if (result.success && result.videoUrl) {
-        setGeneratedVideoUrl(result.videoUrl);
+      if (result.success) {
+        // Vercel 환경에서는 base64 데이터로 받고, 로컬에서는 URL로 받음
+        if (result.videoData) {
+          // Vercel 환경 - base64 데이터를 blob URL로 변환
+          const videoBlob = new Blob([
+            Uint8Array.from(atob(result.videoData), c => c.charCodeAt(0))
+          ], { type: 'video/mp4' });
+          const videoUrl = URL.createObjectURL(videoBlob);
+          setGeneratedVideoUrl(videoUrl);
+        } else if (result.videoUrl) {
+          // 로컬 환경 - 직접 URL 사용
+          setGeneratedVideoUrl(result.videoUrl);
+        } else {
+          throw new Error("영상 데이터를 받을 수 없습니다.");
+        }
+        
         setIsVideoComplete(true);
         
         toast({

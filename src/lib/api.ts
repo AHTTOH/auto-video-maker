@@ -512,6 +512,7 @@ export interface VideoGenerationData {
 export interface VideoGenerationResult {
   success: boolean;
   videoUrl?: string;
+  videoData?: string; // Vercel 환경에서 base64 비디오 데이터
   error?: string;
   message?: string;
 }
